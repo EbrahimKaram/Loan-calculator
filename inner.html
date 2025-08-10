@@ -1,0 +1,35 @@
+<div class="loan-control">
+    <!-- Loan Name -->
+    <div class="mb-2 input-group">
+        <span class="input-group-text" style="min-width: 110px;">Loan Name</span>
+        <input type="text" class="form-control" value="${loan.name}" data-field="name" data-idx="${idx}">
+    </div>
+
+    <!-- Balance -->
+    <div class="mb-2 input-group">
+        <span class="input-group-text" style="min-width: 110px;">Balance ($)</span>
+        <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber"
+            data-idx="${idx}">
+    </div>
+
+    <!-- Interest Rate -->
+    <div class="mb-2 input-group">
+        <span class="input-group-text" style="min-width: 170px;">Interest Rate (%)</span>
+        <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
+            data-field="rateNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
+            data-field="rate" data-idx="${idx}">
+    </div>
+
+    <!-- Monthly Payment -->
+    <div class="mb-3 input-group">
+        <span class="input-group-text" style="min-width: 170px;">Monthly Payment ($)</span>
+        <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
+            data-field="paymentNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
+            data-field="payment" data-idx="${idx}">
+    </div>
+
+    <!-- Remove Loan -->
+    <button class="btn btn-danger w-100" data-remove="${idx}">Remove</button>
+</div
