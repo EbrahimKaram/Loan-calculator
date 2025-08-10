@@ -401,6 +401,17 @@
                         label: {
                             backgroundColor: '#6a7985'
                         }
+                    },
+                    valueFormatter: function (value) {
+                        return parseFloat(value).toFixed(2);
+                    },
+                    formatter: function(params) {
+                        let s = params[0].axisValue + '<br/>';
+                        params.forEach(function(item) {
+                            s += '<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:' + item.color + '"></span>';
+                            s += item.seriesName + ': $' + parseFloat(item.data).toFixed(2) + '<br/>';
+                        });
+                        return s;
                     }
                 },
                 legend: { data: loans.map(l => l.name) },
