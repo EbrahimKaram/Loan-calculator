@@ -11,20 +11,7 @@
     <style>
         body {
             background: #f7f8fa;
-            padding: 20px;
-        }
-
-        body {
-            background: #f7f8fa;
             padding: 10px;
-        }
-
-        .loan-control {
-            background: #fff;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
         }
 
         .loan-control {
@@ -33,16 +20,6 @@
             padding: 12px 8px;
             margin-bottom: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-        }
-
-        #chart {
-            min-height: 500px;
-            height: 100%;
-            width: 100%;
-            background: #fff;
-            border-radius: 12px;
-            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-            padding-top: 10px;
         }
 
         #chart {
@@ -56,11 +33,44 @@
             overflow: auto;
         }
 
-        @media (max-width: 600px) {
-            .container {
-                padding: 0 2px;
-            }
+    #sidebar {
+        #controls {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+            width: 280px;
+            min-width: 180px;
+            max-width: 90vw;
+            border-radius: 8px;
+            position: relative;
+        }
 
+        #sidebar .resize-handle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 8px;
+            height: 100%;
+            cursor: ew-resize;
+            background: rgba(0, 0, 0, 0.03);
+            z-index: 10;
+            border-top-right-radius: 8px;
+            border-bottom-right-radius: 8px;
+        }
+
+        #sidebar.collapsed {
+            display: none !important;
+        }
+
+        #chart-wrapper {
+            flex: 1 1 0%;
+        }
+
+        #chart-wrapper.expanded {
+            flex-basis: 100% !important;
+        }
+
+        @media (max-width: 600px) {
             .loan-control {
                 padding: 8px 2px;
                 font-size: 0.97em;
@@ -100,26 +110,35 @@
 <body>
 
     <div class="container-fluid">
-
         <h2 class="mb-4 text-center">Loan Payoff Simulator</h2>
-        <div class="text-center mb-2">
+
+        <div class="text-left mb-2">
             <button id="toggle-controls-btn" class="btn btn-outline-dark btn-sm">Hide Controls</button>
         </div>
-        <div class="d-flex justify-content-center">
-            <div id="controls" class="row w-auto"></div>
+        <div class="d-flex flex-column flex-md-row">
+            <!-- Sidebar Controls -->
+
+            <div id="sidebar" class="col-12 col-md-3 p-2 bg-white shadow-sm">
+                <div class="resize-handle"></div>
+
+
+
+                <div id="controls" class="grid w-auto"></div>
+
+                <div class="text-center mt-3 d-flex flex-column gap-2">
+                    <button id="add-loan-btn" class="btn btn-primary btn-sm">Add Loan</button>
+                    <input type="file" id="import-csv" accept=".csv" style="display:none">
+                    <button id="import-csv-btn" class="btn btn-secondary btn-sm">Import CSV</button>
+                    <button id="download-template-btn" class="btn btn-outline-secondary btn-sm">Download Template
+                        CSV</button>
+                </div>
+            </div>
+
+            <!-- Chart Area -->
+            <div id="chart-wrapper" class="flex-grow-1 p-2">
+                <div id="chart"></div>
+            </div>
         </div>
-
-
-        <div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2">
-            <button id="add-loan-btn" class="btn btn-primary btn-sm">Add Loan</button>
-            <input type="file" id="import-csv" accept=".csv" style="display:none">
-            <button id="import-csv-btn" class="btn btn-secondary btn-sm">Import CSV</button>
-            <button id="download-template-btn" class="btn btn-outline-secondary btn-sm">Download Template CSV</button>
-
-        </div>
-
-
-        <div id="chart"></div>
     </div>
 
     <script>
@@ -131,100 +150,106 @@
 
         const controlsDiv = document.getElementById('controls');
         const chart = echarts.init(document.getElementById('chart'));
-        window.addEventListener('resize', () => {
-            chart.resize();
-        });
-        // Resize chart when #chart div is resized by user
+        window.addEventListener('resize', () => chart.resize());
         const chartDiv = document.getElementById('chart');
-        let resizeObserver = new ResizeObserver(() => {
-            chart.resize();
-        });
+        let resizeObserver = new ResizeObserver(() => chart.resize());
         resizeObserver.observe(chartDiv);
 
-
-        // ===== Toggle Controls Visibility =====
+        // Sidebar toggle
         const toggleBtn = document.getElementById('toggle-controls-btn');
-        let controlsVisible = true;
+        const sidebar = document.getElementById('sidebar');
+        const chartWrapper = document.getElementById('chart-wrapper');
         toggleBtn.addEventListener('click', () => {
-            controlsVisible = !controlsVisible;
-            controlsDiv.style.display = controlsVisible ? '' : 'none';
-            toggleBtn.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
+            sidebar.classList.toggle('collapsed');
+            if (sidebar.classList.contains('collapsed')) {
+                toggleBtn.textContent = 'Show Controls';
+                chartWrapper.classList.add('expanded');
+                chartWrapper.classList.remove('collapsed');
+            } else {
+                toggleBtn.textContent = 'Hide Controls';
+                chartWrapper.classList.remove('expanded');
+                chartWrapper.classList.add('collapsed');
+            }
+            setTimeout(() => chart.resize(), 310); // resize after animation
         });
 
-        // ===== UI Rendering =====
+
+        // Sidebar resize logic
+        const sidebarHandle = document.querySelector('#sidebar .resize-handle');
+        let isResizing = false;
+        let startX, startWidth;
+        sidebarHandle.addEventListener('mousedown', function (e) {
+            isResizing = true;
+            startX = e.clientX;
+            startWidth = sidebar.offsetWidth;
+            document.body.style.userSelect = 'none';
+        });
+        document.addEventListener('mousemove', function (e) {
+            if (!isResizing) return;
+            let newWidth = Math.max(180, Math.min(window.innerWidth * 0.9, startWidth + (e.clientX - startX)));
+            sidebar.style.width = newWidth + 'px';
+            sidebar.style.minWidth = newWidth + 'px';
+            setTimeout(() => chart.resize(), 0);
+        });
+        document.addEventListener('mouseup', function () {
+            if (isResizing) {
+                isResizing = false;
+                document.body.style.userSelect = '';
+            }
+        });
+
+        // Render controls
         function renderControls() {
             controlsDiv.innerHTML = '';
             loans.forEach((loan, idx) => {
                 const paymentMax = Math.ceil(loan.balance + loan.balance * loan.rate / 12);
-
                 const col = document.createElement('div');
-                col.className = 'col-4 col-lg-3';
+                col.className = 'col-12 ';
                 col.innerHTML = `
 <div class="loan-control">
-    <!-- Loan Name -->
     <div class="mb-2 input-group">
         <span class="input-group-text" style="min-width: 110px;">Loan Name</span>
         <input type="text" class="form-control" value="${loan.name}" data-field="name" data-idx="${idx}">
     </div>
-
-    <!-- Balance -->
     <div class="mb-2 input-group">
         <span class="input-group-text" style="min-width: 110px;">Balance ($)</span>
-        <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber"
-            data-idx="${idx}">
+        <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber" data-idx="${idx}">
     </div>
-
-    <!-- Interest Rate -->
     <div class="mb-2 input-group">
         <span class="input-group-text" style="min-width: 170px;">Interest Rate (%)</span>
-        <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
-            data-field="rateNumber" data-idx="${idx}">
-        <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
-            data-field="rate" data-idx="${idx}">
+        <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rateNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rate" data-idx="${idx}">
     </div>
-
-    <!-- Monthly Payment -->
     <div class="mb-3 input-group">
         <span class="input-group-text" style="min-width: 170px;">Monthly Payment ($)</span>
-        <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
-            data-field="paymentNumber" data-idx="${idx}">
-        <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
-            data-field="payment" data-idx="${idx}">
+        <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="paymentNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="payment" data-idx="${idx}">
     </div>
-
-    <!-- Remove Loan -->
     <button class="btn btn-danger w-100" data-remove="${idx}">Remove</button>
-</div
-    `;
+</div>`;
                 controlsDiv.appendChild(col);
             });
         }
 
-        // ===== CSV Import =====
+        // CSV Import
         document.getElementById('import-csv-btn').addEventListener('click', () => {
             document.getElementById('import-csv').click();
         });
-
         document.getElementById('import-csv').addEventListener('change', function (e) {
             const file = e.target.files[0];
             if (!file) return;
             const reader = new FileReader();
             reader.onload = function (evt) {
                 const text = evt.target.result;
-
-                // Parse CSV robustly for quoted fields
                 const parseCSVLine = (line) => {
                     const values = [];
-                    let current = '';
-                    let insideQuotes = false;
-
+                    let current = '', insideQuotes = false;
                     for (let i = 0; i < line.length; i++) {
                         const char = line[i];
                         if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
                             insideQuotes = !insideQuotes;
                         } else if (char === ',' && !insideQuotes) {
-                            values.push(current.trim());
-                            current = '';
+                            values.push(current.trim()); current = '';
                         } else {
                             current += char;
                         }
@@ -232,26 +257,17 @@
                     values.push(current.trim());
                     return values;
                 };
-
                 const lines = text.split(/\r?\n/).filter(l => l.trim());
                 if (lines.length < 2) return;
-
                 const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
                 const nameIdx = headers.indexOf('name');
                 const balanceIdx = headers.indexOf('balance');
                 const rateIdx = headers.indexOf('rate');
                 const paymentIdx = headers.indexOf('payment');
-
                 if (nameIdx === -1 || balanceIdx === -1 || rateIdx === -1 || paymentIdx === -1) {
-                    alert('CSV must have headers: name,balance,rate,payment');
-                    return;
+                    alert('CSV must have headers: name,balance,rate,payment'); return;
                 }
-
-                const cleanNumber = (str) => {
-                    if (!str) return 0;
-                    return parseFloat(str.replace(/[\$, %]/g, '').replace(/,/g, '')) || 0;
-                };
-
+                const cleanNumber = (str) => parseFloat(str.replace(/[\$, %]/g, '').replace(/,/g, '')) || 0;
                 const imported = [];
                 for (let i = 1; i < lines.length; i++) {
                     const row = parseCSVLine(lines[i]);
@@ -263,7 +279,6 @@
                         payment: cleanNumber(row[paymentIdx])
                     });
                 }
-
                 if (imported.length) {
                     loans = imported;
                     renderControls();
@@ -275,66 +290,43 @@
             reader.readAsText(file);
         });
 
-
-        // ===== Download Template CSV =====
+        // Download template
         document.getElementById('download-template-btn').addEventListener('click', () => {
             const csv = 'name,balance,rate,payment\nCar Loan,15000,5,300\nStudent Loan,40000,4.5,500\nCredit Card,8000,18,200\n';
             const blob = new Blob([csv], { type: 'text/csv' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
-            a.href = url;
-            a.download = 'loan_template.csv';
-            document.body.appendChild(a);
-            a.click();
+            a.href = url; a.download = 'loan_template.csv';
+            document.body.appendChild(a); a.click();
             document.body.removeChild(a);
             URL.revokeObjectURL(url);
         });
 
-        // ===== Event Delegation =====
+        // Input handling
         controlsDiv.addEventListener('input', e => {
             const field = e.target.dataset.field;
             const idx = e.target.dataset.idx;
             if (idx === undefined) return;
-
             const syncValue = val => parseFloat(val) || 0;
-
-            // Sync number <-> slider for each type
             if (field === 'rate' || field === 'rateNumber') {
                 const val = syncValue(e.target.value);
                 loans[idx].rate = val / 100;
-                if (field === 'rate') {
-                    controlsDiv.querySelector(`input[data-field="rateNumber"][data-idx="${idx}"]`).value = val;
-                } else {
-                    controlsDiv.querySelector(`input[data-field="rate"][data-idx="${idx}"]`).value = val;
-                }
+                controlsDiv.querySelector(`input[data-field="${field === 'rate' ? 'rateNumber' : 'rate'}"][data-idx="${idx}"]`).value = val;
                 adjustPaymentMax(idx);
-
             } else if (field === 'payment' || field === 'paymentNumber') {
                 const val = Math.max(syncValue(e.target.value), 0);
                 loans[idx].payment = val;
-                if (field === 'payment') {
-                    controlsDiv.querySelector(`input[data-field="paymentNumber"][data-idx="${idx}"]`).value = val;
-                } else {
-                    controlsDiv.querySelector(`input[data-field="payment"][data-idx="${idx}"]`).value = val;
-                }
-
+                controlsDiv.querySelector(`input[data-field="${field === 'payment' ? 'paymentNumber' : 'payment'}"][data-idx="${idx}"]`).value = val;
             } else if (field === 'balance' || field === 'balanceNumber') {
                 const val = Math.max(syncValue(e.target.value), 0);
                 loans[idx].balance = val;
-                if (field === 'balance') {
-                    controlsDiv.querySelector(`input[data-field="balanceNumber"][data-idx="${idx}"]`).value = val;
-                } else {
-                    controlsDiv.querySelector(`input[data-field="balance"][data-idx="${idx}"]`).value = val;
-                }
+                controlsDiv.querySelector(`input[data-field="${field === 'balance' ? 'balanceNumber' : 'balance'}"][data-idx="${idx}"]`).value = val;
                 adjustPaymentMax(idx);
-
             } else if (field === 'name') {
                 loans[idx].name = e.target.value;
             }
-
             updateChart();
         });
-
         function adjustPaymentMax(idx) {
             const slider = controlsDiv.querySelector(`input[data-field="payment"][data-idx="${idx}"]`);
             const numberInput = controlsDiv.querySelector(`input[data-field="paymentNumber"][data-idx="${idx}"]`);
@@ -349,7 +341,6 @@
                 }
             }
         }
-
         controlsDiv.addEventListener('click', e => {
             if (e.target.dataset.remove !== undefined) {
                 loans.splice(parseInt(e.target.dataset.remove, 10), 1);
@@ -357,19 +348,16 @@
                 updateChart();
             }
         });
-
         document.getElementById('add-loan-btn').addEventListener('click', () => {
             loans.push({ name: `Loan ${loans.length + 1}`, balance: 10000, rate: 0.05, payment: 200 });
             renderControls();
             updateChart();
         });
 
-        // ===== Loan Calculation =====
+        // Loan calc
         function calculateBalances(loans) {
             let allBalances = loans.map(l => [l.balance]);
-            let months = 0;
-            let maxMonths = 0;
-
+            let months = 0, maxMonths = 0;
             while (true) {
                 let allPaid = true;
                 months++;
@@ -390,36 +378,25 @@
             return { months: Array.from({ length: maxMonths + 1 }, (_, i) => i), balances: allBalances };
         }
 
-        // ===== Chart Update =====
+        // Chart update
         function updateChart() {
             let { months, balances } = calculateBalances(loans);
             chart.setOption({
                 tooltip: {
                     trigger: 'axis',
-                    axisPointer: {
-                        type: 'cross',
-                        label: {
-                            backgroundColor: '#6a7985'
-                        }
-                    },
-                    valueFormatter: function (value) {
-                        return parseFloat(value).toFixed(2);
-                    },
-                    formatter: function(params) {
-                        // Get the month number from axisValue (e.g., 'Month 5')
+                    axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
+                    valueFormatter: v => parseFloat(v).toFixed(2),
+                    formatter: function (params) {
                         let axisVal = params[0].axisValue;
                         let match = axisVal.match(/Month (\d+)/);
                         let monthNum = match ? parseInt(match[1], 10) : 0;
-                        // Calculate month/year
                         let now = new Date();
-                        let startMonth = now.getMonth(); // 0-based
-                        let startYear = now.getFullYear();
-                        let totalMonths = startMonth + monthNum;
-                        let year = startYear + Math.floor(totalMonths / 12);
-                        let month = (totalMonths % 12) + 1; // 1-based
+                        let totalMonths = now.getMonth() + monthNum;
+                        let year = now.getFullYear() + Math.floor(totalMonths / 12);
+                        let month = (totalMonths % 12) + 1;
                         let monthName = new Date(year, month - 1, 1).toLocaleString('default', { month: 'short' });
                         let s = axisVal + ` (${monthName} ${year})<br/>`;
-                        params.forEach(function(item) {
+                        params.forEach(function (item) {
                             s += '<span style="display:inline-block;margin-right:5px;border-radius:10px;width:10px;height:10px;background-color:' + item.color + '"></span>';
                             s += item.seriesName + ': $' + parseFloat(item.data).toFixed(2) + '<br/>';
                         });
@@ -450,8 +427,6 @@
                 }))
             });
         }
-
-        // ===== Gradient Colors =====
         function getGradientColor(i, top) {
             const palette = [
                 ['#ff7f50', '#ffdab9'],
@@ -467,7 +442,6 @@
         renderControls();
         updateChart();
     </script>
-
 </body>
 
 </html>
