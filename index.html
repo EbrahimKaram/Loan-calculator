@@ -19,12 +19,6 @@
     margin-bottom: 15px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.07);
   }
-  .value-display {
-    min-width: 50px;
-    text-align: right;
-    font-weight: 500;
-    color: #333;
-  }
   #chart {
     height: 500px;
     background: #fff;
@@ -65,29 +59,48 @@ function renderControls() {
     const paymentMax = Math.ceil(loan.balance + loan.balance * loan.rate / 12);
 
     const col = document.createElement('div');
-    col.className = 'col-6 col-lg-4';
+    col.className = 'col-12 col-lg-4';
     col.innerHTML = `
       <div class="loan-control">
+        <!-- Loan Name -->
         <div class="mb-2">
           <label class="form-label">Loan Name</label>
           <input type="text" class="form-control" value="${loan.name}" data-field="name" data-idx="${idx}">
         </div>
 
+        <!-- Balance -->
         <div class="mb-2">
           <label class="form-label">Balance ($)</label>
-          <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balance" data-idx="${idx}">
+          <div class="input-group">
+            <input type="number" class="form-control" min="0" step="100" 
+                   value="${loan.balance}" data-field="balanceNumber" data-idx="${idx}">
+
+          </div>
         </div>
 
+        <!-- Interest Rate -->
         <div class="mb-2">
-          <label class="form-label">Interest Rate: <span id="rate-display-${idx}" class="value-display">${(loan.rate * 100).toFixed(1)}%</span></label>
-          <input type="range" class="form-range" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rate" data-idx="${idx}">
+          <label class="form-label">Interest Rate (%)</label>
+          <div class="input-group">
+            <input type="number" class="form-control" min="0" max="25" step="0.1"
+                   value="${(loan.rate * 100).toFixed(1)}" data-field="rateNumber" data-idx="${idx}">
+            <input type="range" class="form-range" min="0" max="25" step="0.1"
+                   value="${(loan.rate * 100).toFixed(1)}" data-field="rate" data-idx="${idx}">
+          </div>
         </div>
 
+        <!-- Monthly Payment -->
         <div class="mb-3">
-          <label class="form-label">Monthly Payment: <span id="payment-display-${idx}" class="value-display">$${loan.payment}</span></label>
-          <input type="range" class="form-range" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="payment" data-idx="${idx}">
+          <label class="form-label">Monthly Payment ($)</label>
+          <div class="input-group">
+            <input type="number" class="form-control" min="10" max="${paymentMax}" step="10"
+                   value="${loan.payment}" data-field="paymentNumber" data-idx="${idx}">
+            <input type="range" class="form-range" min="10" max="${paymentMax}" step="10"
+                   value="${loan.payment}" data-field="payment" data-idx="${idx}">
+          </div>
         </div>
 
+        <!-- Remove Loan -->
         <button class="btn btn-danger w-100" data-remove="${idx}">Remove</button>
       </div>
     `;
@@ -99,35 +112,58 @@ function renderControls() {
 controlsDiv.addEventListener('input', e => {
   const field = e.target.dataset.field;
   const idx = e.target.dataset.idx;
-  if (field && idx !== undefined) {
+  if (idx === undefined) return;
+
+  const syncValue = val => parseFloat(val) || 0;
+
+  // Sync number <-> slider for each type
+  if (field === 'rate' || field === 'rateNumber') {
+    const val = syncValue(e.target.value);
+    loans[idx].rate = val / 100;
     if (field === 'rate') {
-      loans[idx].rate = (parseFloat(e.target.value) || 0) / 100;
-      document.getElementById(`rate-display-${idx}`).textContent = `${parseFloat(e.target.value).toFixed(1)}%`;
-      // Adjust payment max when rate changes
-      adjustPaymentMax(idx);
-    } else if (field === 'payment') {
-      loans[idx].payment = Math.max(parseFloat(e.target.value) || 0, 0);
-      document.getElementById(`payment-display-${idx}`).textContent = `$${parseFloat(e.target.value)}`;
-    } else if (field === 'balance') {
-      loans[idx].balance = Math.max(parseFloat(e.target.value) || 0, 0);
-      // Adjust payment max when balance changes
-      adjustPaymentMax(idx);
+      controlsDiv.querySelector(`input[data-field="rateNumber"][data-idx="${idx}"]`).value = val;
     } else {
-      loans[idx][field] = e.target.value;
+      controlsDiv.querySelector(`input[data-field="rate"][data-idx="${idx}"]`).value = val;
     }
-    updateChart();
+    adjustPaymentMax(idx);
+
+  } else if (field === 'payment' || field === 'paymentNumber') {
+    const val = Math.max(syncValue(e.target.value), 0);
+    loans[idx].payment = val;
+    if (field === 'payment') {
+      controlsDiv.querySelector(`input[data-field="paymentNumber"][data-idx="${idx}"]`).value = val;
+    } else {
+      controlsDiv.querySelector(`input[data-field="payment"][data-idx="${idx}"]`).value = val;
+    }
+
+  } else if (field === 'balance' || field === 'balanceNumber') {
+    const val = Math.max(syncValue(e.target.value), 0);
+    loans[idx].balance = val;
+    if (field === 'balance') {
+      controlsDiv.querySelector(`input[data-field="balanceNumber"][data-idx="${idx}"]`).value = val;
+    } else {
+      controlsDiv.querySelector(`input[data-field="balance"][data-idx="${idx}"]`).value = val;
+    }
+    adjustPaymentMax(idx);
+
+  } else if (field === 'name') {
+    loans[idx].name = e.target.value;
   }
+
+  updateChart();
 });
 
 function adjustPaymentMax(idx) {
   const slider = controlsDiv.querySelector(`input[data-field="payment"][data-idx="${idx}"]`);
-  if (slider) {
+  const numberInput = controlsDiv.querySelector(`input[data-field="paymentNumber"][data-idx="${idx}"]`);
+  if (slider && numberInput) {
     const maxVal = Math.ceil(loans[idx].balance + loans[idx].balance * loans[idx].rate / 12);
     slider.max = maxVal;
+    numberInput.max = maxVal;
     if (loans[idx].payment > maxVal) {
       loans[idx].payment = maxVal;
       slider.value = maxVal;
-      document.getElementById(`payment-display-${idx}`).textContent = `$${maxVal}`;
+      numberInput.value = maxVal;
     }
   }
 }
