@@ -33,13 +33,14 @@
             overflow: auto;
         }
 
-    #sidebar {
-        #controls {
-            max-height: 70vh;
-            overflow-y: auto;
-        }
+        #sidebar {
+            #controls {
+                max-height: 70vh;
+                overflow-y: auto;
+            }
+
             width: 280px;
-            min-width: 180px;
+            min-width: 300px;
             max-width: 90vw;
             border-radius: 8px;
             position: relative;
@@ -118,7 +119,7 @@
         <div class="d-flex flex-column flex-md-row">
             <!-- Sidebar Controls -->
 
-            <div id="sidebar" class="col-12 col-md-3 p-2 bg-white shadow-sm">
+            <div id="sidebar" class="col-12 col-md-4 p-2 bg-white shadow-sm">
                 <div class="resize-handle"></div>
 
 
@@ -206,21 +207,21 @@
                 const col = document.createElement('div');
                 col.className = 'col-12 ';
                 col.innerHTML = `
-<div class="loan-control">
+<div class="loan-control m-1">
     <div class="mb-2 input-group">
         <span class="input-group-text" style="min-width: 110px;">Loan Name</span>
         <input type="text" class="form-control" value="${loan.name}" data-field="name" data-idx="${idx}">
     </div>
-    <div class="mb-2 input-group">
+    <div class="mb-2 input-group rounded">
         <span class="input-group-text" style="min-width: 110px;">Balance ($)</span>
         <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber" data-idx="${idx}">
     </div>
-    <div class="mb-2 input-group">
+    <div class="mb-2 input-group rounded">
         <span class="input-group-text" style="min-width: 170px;">Interest Rate (%)</span>
         <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rateNumber" data-idx="${idx}">
         <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rate" data-idx="${idx}">
     </div>
-    <div class="mb-3 input-group">
+    <div class="mb-3 input-group rounded">
         <span class="input-group-text" style="min-width: 170px;">Monthly Payment ($)</span>
         <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="paymentNumber" data-idx="${idx}">
         <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="payment" data-idx="${idx}">
