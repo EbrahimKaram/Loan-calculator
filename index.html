@@ -99,9 +99,13 @@
 <body>
 
     <div class="container-fluid">
-        <h2 class="mb-4 text-center">Loan Payoff Simulator</h2>
 
+        <h2 class="mb-4 text-center">Loan Payoff Simulator</h2>
+        <div class="text-center mb-2">
+            <button id="toggle-controls-btn" class="btn btn-outline-dark btn-sm">Hide Controls</button>
+        </div>
         <div id="controls" class="row"></div>
+
 
         <div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2">
             <button id="add-loan-btn" class="btn btn-primary btn-sm">Add Loan</button>
@@ -126,6 +130,16 @@
         const chart = echarts.init(document.getElementById('chart'));
         window.addEventListener('resize', () => {
             chart.resize();
+        });
+
+
+        // ===== Toggle Controls Visibility =====
+        const toggleBtn = document.getElementById('toggle-controls-btn');
+        let controlsVisible = true;
+        toggleBtn.addEventListener('click', () => {
+            controlsVisible = !controlsVisible;
+            controlsDiv.style.display = controlsVisible ? '' : 'none';
+            toggleBtn.textContent = controlsVisible ? 'Hide Controls' : 'Show Controls';
         });
 
         // ===== UI Rendering =====
