@@ -10,19 +10,21 @@
     <script src="https://cdn.jsdelivr.net/npm/echarts@5/dist/echarts.min.js"></script>
 
     <style>
-    .bmc-float {
-        position: fixed;
-        right: 24px;
-        bottom: 24px;
-        z-index: 9999;
-        pointer-events: auto;
-    }
-    @media (max-width: 600px) {
         .bmc-float {
-            right: 8px;
-            bottom: 8px;
+            position: fixed;
+            right: 24px;
+            bottom: 24px;
+            z-index: 9999;
+            pointer-events: auto;
         }
-    }
+
+        @media (max-width: 600px) {
+            .bmc-float {
+                right: 8px;
+                bottom: 8px;
+            }
+        }
+
         body {
             background: #f7f8fa;
             padding: 10px;
@@ -127,7 +129,9 @@
 
     <div class="container-fluid">
         <h2 class="mb-1 text-center">Loan Payoff Simulator</h2>
-        <p class="text-center mb-1">Visualize how your loan payments affect your balances over time. Add as many loans as you like. You can view the code on <a href="https://github.com/EbrahimKaram/Loan-calculator" target="_blank" title="GitHub">GitHub<span>🐙</span></a>.</p>
+        <p class="text-center mb-1">Visualize how your loan payments affect your balances over time. Add as many loans
+            as you like. You can view the code on <a href="https://github.com/EbrahimKaram/Loan-calculator"
+                target="_blank" title="GitHub">GitHub<span>🐙</span></a>.</p>
 
         <div class="text-left mb-2">
             <button id="toggle-controls-btn" class="btn btn-outline-dark btn-sm">Hide Controls</button>
@@ -361,6 +365,7 @@
         controlsDiv.addEventListener('click', e => {
             if (e.target.dataset.remove !== undefined) {
                 loans.splice(parseInt(e.target.dataset.remove, 10), 1);
+                chart.clear();
                 renderControls();
                 updateChart();
             }
@@ -398,7 +403,13 @@
         // Chart update
         function updateChart() {
             let { months, balances } = calculateBalances(loans);
+
+            // console.log(loans);
+            // console.log(balances);
+
             chart.setOption({
+                animationDurationUpdate: 500,       // half a second
+                animationEasingUpdate: 'cubicOut', // smooth easing
                 tooltip: {
                     trigger: 'axis',
                     axisPointer: { type: 'cross', label: { backgroundColor: '#6a7985' } },
@@ -444,6 +455,7 @@
                 }))
             });
         }
+
         function getGradientColor(i, top) {
             const palette = [
                 ['#ff7f50', '#ffdab9'],
@@ -461,9 +473,10 @@
     </script>
     <!-- Buy Me a Coffee Floating Button -->
     <div class="bmc-float">
-        <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js" data-name="bmc-button"
-            data-slug="bobKaram" data-color="#5F7FFF" data-emoji="🍺" data-font="Comic" data-text="Cheers to your Goals"
-            data-outline-color="#000000" data-font-color="#ffffff" data-coffee-color="#FFDD00"></script>
+        <script type="text/javascript" src="https://cdnjs.buymeacoffee.com/1.0.0/button.prod.min.js"
+            data-name="bmc-button" data-slug="bobKaram" data-color="#5F7FFF" data-emoji="🍺" data-font="Comic"
+            data-text="Cheers to your Goals" data-outline-color="#000000" data-font-color="#ffffff"
+            data-coffee-color="#FFDD00"></script>
     </div>
 </body>
 
