@@ -13,10 +13,11 @@
             background: #f7f8fa;
             padding: 20px;
         }
-            body {
-                background: #f7f8fa;
-                padding: 10px;
-            }
+
+        body {
+            background: #f7f8fa;
+            padding: 10px;
+        }
 
         .loan-control {
             background: #fff;
@@ -25,13 +26,14 @@
             margin-bottom: 15px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
         }
-            .loan-control {
-                background: #fff;
-                border-radius: 8px;
-                padding: 12px 8px;
-                margin-bottom: 12px;
-                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-            }
+
+        .loan-control {
+            background: #fff;
+            border-radius: 8px;
+            padding: 12px 8px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
+        }
 
         #chart {
             min-height: 500px;
@@ -42,41 +44,50 @@
             box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
             padding-top: 10px;
         }
-            #chart {
-                min-height: 220px;
-                height: 40vw;
-                max-height: 350px;
-                background: #fff;
-                border-radius: 12px;
-                box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
-                padding-top: 6px;
-            }
+
+        #chart {
+            min-height: 220px;
+            height: 40vw;
+            max-height: 350px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.07);
+            padding-top: 6px;
+        }
+
         @media (max-width: 600px) {
             .container {
                 padding: 0 2px;
             }
+
             .loan-control {
                 padding: 8px 2px;
                 font-size: 0.97em;
             }
+
             .input-group-text {
                 font-size: 0.97em;
                 min-width: 90px !important;
                 padding-left: 6px;
                 padding-right: 6px;
             }
-            .form-control, .form-range {
+
+            .form-control,
+            .form-range {
                 font-size: 0.97em;
             }
+
             #chart {
                 min-height: 160px;
                 height: 45vw;
                 max-height: 220px;
             }
+
             h2 {
                 font-size: 1.2rem;
                 margin-bottom: 1rem;
             }
+
             #add-loan-btn {
                 font-size: 0.97em;
                 padding: 6px 18px;
@@ -92,9 +103,14 @@
 
         <div id="controls" class="row"></div>
 
-        <div class="text-center mb-4">
-            <button id="add-loan-btn" class="btn btn-primary btn-lg">Add Loan</button>
+        <div class="text-center mb-4 d-flex flex-column flex-md-row justify-content-center align-items-center gap-2">
+            <button id="add-loan-btn" class="btn btn-primary btn-sm">Add Loan</button>
+            <input type="file" id="import-csv" accept=".csv" style="display:none">
+            <button id="import-csv-btn" class="btn btn-secondary btn-sm">Import CSV</button>
+            <button id="download-template-btn" class="btn btn-outline-secondary btn-sm">Download Template CSV</button>
+
         </div>
+
 
         <div id="chart"></div>
     </div>
@@ -160,6 +176,96 @@
                 controlsDiv.appendChild(col);
             });
         }
+
+        // ===== CSV Import =====
+        document.getElementById('import-csv-btn').addEventListener('click', () => {
+            document.getElementById('import-csv').click();
+        });
+
+        document.getElementById('import-csv').addEventListener('change', function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+                const text = evt.target.result;
+
+                // Parse CSV robustly for quoted fields
+                const parseCSVLine = (line) => {
+                    const values = [];
+                    let current = '';
+                    let insideQuotes = false;
+
+                    for (let i = 0; i < line.length; i++) {
+                        const char = line[i];
+                        if (char === '"' && (i === 0 || line[i - 1] !== '\\')) {
+                            insideQuotes = !insideQuotes;
+                        } else if (char === ',' && !insideQuotes) {
+                            values.push(current.trim());
+                            current = '';
+                        } else {
+                            current += char;
+                        }
+                    }
+                    values.push(current.trim());
+                    return values;
+                };
+
+                const lines = text.split(/\r?\n/).filter(l => l.trim());
+                if (lines.length < 2) return;
+
+                const headers = parseCSVLine(lines[0]).map(h => h.trim().toLowerCase());
+                const nameIdx = headers.indexOf('name');
+                const balanceIdx = headers.indexOf('balance');
+                const rateIdx = headers.indexOf('rate');
+                const paymentIdx = headers.indexOf('payment');
+
+                if (nameIdx === -1 || balanceIdx === -1 || rateIdx === -1 || paymentIdx === -1) {
+                    alert('CSV must have headers: name,balance,rate,payment');
+                    return;
+                }
+
+                const cleanNumber = (str) => {
+                    if (!str) return 0;
+                    return parseFloat(str.replace(/[\$, %]/g, '').replace(/,/g, '')) || 0;
+                };
+
+                const imported = [];
+                for (let i = 1; i < lines.length; i++) {
+                    const row = parseCSVLine(lines[i]);
+                    if (row.length < 4) continue;
+                    imported.push({
+                        name: row[nameIdx].replace(/^"|"$/g, '').trim(),
+                        balance: cleanNumber(row[balanceIdx]),
+                        rate: cleanNumber(row[rateIdx]) / 100,
+                        payment: cleanNumber(row[paymentIdx])
+                    });
+                }
+
+                if (imported.length) {
+                    loans = imported;
+                    renderControls();
+                    updateChart();
+                } else {
+                    alert('No valid loans found in CSV.');
+                }
+            };
+            reader.readAsText(file);
+        });
+
+
+        // ===== Download Template CSV =====
+        document.getElementById('download-template-btn').addEventListener('click', () => {
+            const csv = 'name,balance,rate,payment\nCar Loan,15000,5,300\nStudent Loan,40000,4.5,500\nCredit Card,8000,18,200\n';
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'loan_template.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
 
         // ===== Event Delegation =====
         controlsDiv.addEventListener('input', e => {
