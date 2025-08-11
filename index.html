@@ -243,20 +243,29 @@
     </div>
     <div class="mb-2 input-group rounded">
         <span class="input-group-text" style="min-width: 110px;">Balance ($)</span>
-        <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber" data-idx="${idx}">
+        <input type="number" class="form-control" min="0" step="100" value="${loan.balance}" data-field="balanceNumber"
+            data-idx="${idx}">
     </div>
     <div class="mb-2 input-group rounded">
         <span class="input-group-text" style="min-width: 170px;">Interest Rate (%)</span>
-        <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rateNumber" data-idx="${idx}">
-        <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}" data-field="rate" data-idx="${idx}">
+        <input type="number" class="form-control" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
+            data-field="rateNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="0" max="25" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
+            data-field="rate" data-idx="${idx}">
     </div>
     <div class="mb-3 input-group rounded">
         <span class="input-group-text" style="min-width: 170px;">Monthly Payment ($)</span>
-        <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="paymentNumber" data-idx="${idx}">
-        <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}" data-field="payment" data-idx="${idx}">
+        <input type="number" class="form-control" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
+            data-field="paymentNumber" data-idx="${idx}">
+        <input type="range" class="form-range ms-2" min="10" max="${paymentMax}" step="10" value="${loan.payment}"
+            data-field="payment" data-idx="${idx}">
     </div>
+  <div class="mb-2">
+    <strong>Last Payment:</strong> <span class="last-payment-date" data-idx="${idx}">${loan.lastPaymentDate || '—'}</span>
+</div>
     <button class="btn btn-danger w-100" data-remove="${idx}">Remove</button>
-</div>`;
+</div>
+`;
                 controlsDiv.appendChild(col);
             });
         }
@@ -319,6 +328,14 @@
             };
             reader.readAsText(file);
         });
+
+        ///// update last payment date
+        function updateLastPaymentDates() {
+            loans.forEach((loan, idx) => {
+                const el = document.querySelector(`.last-payment-date[data-idx="${idx}"]`);
+                if (el) el.textContent = loan.lastPaymentDate || '—';
+            });
+        }
 
         // Download template
         document.getElementById('download-template-btn').addEventListener('click', () => {
@@ -385,10 +402,12 @@
             updateChart();
         });
 
-        // Loan calc
+        // Loan calculate Balances
         function calculateBalances(loans) {
             let allBalances = loans.map(l => [l.balance]);
             let months = 0, maxMonths = 0;
+            let payoffMonths = Array(loans.length).fill(null); // store month of last payment
+
             while (true) {
                 let allPaid = true;
                 months++;
@@ -398,6 +417,9 @@
                         allPaid = false;
                         let interest = bal * (loans[i].rate / 12);
                         let newBal = bal + interest - loans[i].payment;
+                        if (newBal <= 0 && payoffMonths[i] === null) {
+                            payoffMonths[i] = months; // record payoff month
+                        }
                         allBalances[i][months] = Math.max(newBal, 0);
                     } else {
                         allBalances[i][months] = 0;
@@ -406,15 +428,29 @@
                 if (allPaid || months > 600) break;
                 maxMonths = months;
             }
+
+            // Calculate payoff dates
+            let now = new Date();
+            loans.forEach((loan, i) => {
+                if (payoffMonths[i] !== null) {
+                    let totalMonths = now.getMonth() + payoffMonths[i];
+                    let year = now.getFullYear() + Math.floor(totalMonths / 12);
+                    let month = (totalMonths % 12) + 1;
+                    loan.lastPaymentDate = new Date(year, month - 1, 1).toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+                } else {
+                    loan.lastPaymentDate = '—';
+                }
+            });
+
             return { months: Array.from({ length: maxMonths + 1 }, (_, i) => i), balances: allBalances };
         }
+
 
         // Chart update
         function updateChart() {
             let { months, balances } = calculateBalances(loans);
 
-            // console.log(loans);
-            // console.log(balances);
+            updateLastPaymentDates();
 
             chart.setOption({
                 animationDurationUpdate: 500,       // half a second
