@@ -376,9 +376,13 @@
         </div>
         
         <div class="mb-3">
-             <label class="form-label-sm d-flex justify-content-between">
+             <label class="form-label-sm d-flex justify-content-between align-items-center">
                 <span>Interest Rate</span>
-                <span class="text-primary fw-bold" id="rate-display-${idx}">${(loan.rate * 100).toFixed(1)}%</span>
+                <div class="input-group input-group-sm" style="width: 85px;">
+                    <input type="number" class="form-control text-end px-1" min="0" max="35" step="0.1" value="${(loan.rate * 100).toFixed(1)}" 
+                        data-field="rateNumber" data-idx="${idx}">
+                    <span class="input-group-text px-1">%</span>
+                </div>
             </label>
             <input type="range" class="form-range" min="0" max="35" step="0.1" value="${(loan.rate * 100).toFixed(1)}"
             data-field="rate" data-idx="${idx}">
@@ -523,13 +527,17 @@
             if (field === 'rate' || field === 'rateNumber') {
                 const val = syncValue(e.target.value);
                 loans[idx].rate = val / 100;
-                // Update range slider if number input changed, and vice versa if needed (though we only have number input sometimes)
-                const rangeInput = controlsDiv.querySelector(`input[data-field="rate"][data-idx="${idx}"]`);
-                if (rangeInput) rangeInput.value = val;
+                // Update range slider if number input changed
+                if (field === 'rateNumber') {
+                    const rangeInput = controlsDiv.querySelector(`input[data-field="rate"][data-idx="${idx}"]`);
+                    if (rangeInput) rangeInput.value = val;
+                }
                 
-                // Update display text
-                const displayEl = document.getElementById(`rate-display-${idx}`);
-                if (displayEl) displayEl.textContent = val.toFixed(1) + '%';
+                // Update number input if range changed
+                if (field === 'rate') {
+                     const numberInput = controlsDiv.querySelector(`input[data-field="rateNumber"][data-idx="${idx}"]`);
+                     if (numberInput) numberInput.value = val;
+                }
                 
                 adjustPaymentMax(idx);
             } else if (field === 'payment' || field === 'paymentNumber') {
